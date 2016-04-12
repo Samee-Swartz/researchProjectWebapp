@@ -154,7 +154,7 @@ var DatasetGroup = React.createClass({
 					selectedSeries: '---', series: []};
 	},
 	handleNewDataset: function(e) {
-		this.setState({threshold: 80}); // update to new dataset's threshold
+		this.setState({threshold: 0.2}); // update to new dataset's threshold
 		var i;
 		for (i=0; i < this.props.datasetTitles.length; i++) {
 			if (this.props.datasetTitles[i] == e) {

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Interactive Exploration of Time Series</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}" />
+ <!--    <link href="../../node_modules/fixed-data-table/dist/fixed-data-table.css" rel="stylesheet"/> -->
+    <link rel="stylesheet" href="{{ url_for('home', filename='../../node_modules/fixed-data-table/dist/fixed-data-table.css') }}" />
+    <!-- <link rel="stylesheet" type="text/css" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.1/css/bootstrap.min.css"> -->
+<!--     <link href="../../node_modules/react-widgets/dist/css/react-widgets.css" rel="stylesheet"/> -->
+    <link rel="stylesheet" href="{{ url_for('home', filename='../../node_modules/react-widgets/dist/css/react-widgets.css') }}" />
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/0.14.7/react-dom.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-core/5.8.23/browser.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/0.3.5/marked.min.js"></script>
+  </head>
+  <body>
+
+    <div class="container">
+      {% block content %}
+      {% endblock %}
+    </div>
+
+  </body>
+</html>

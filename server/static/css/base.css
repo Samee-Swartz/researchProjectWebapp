@@ -1,0 +1,156 @@
+body {
+  background: #fff;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  line-height: 1.7;
+  margin: 0;
+  padding: 30px;
+  height: 100%;
+}
+
+a {
+  color: #4183c4;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+code {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-radius: 3px;
+  font-family: "Bitstream Vera Sans Mono", Consolas, Courier, monospace;
+  font-size: 12px;
+  margin: 0 2px;
+  padding: 0 5px;
+}
+
+h1, h2, h3, h4 {
+  font-weight: bold;
+  margin: 0 0 15px;
+  padding: 0;
+}
+
+h1 {
+  border-bottom: 1px solid #ddd;
+  font-size: 2.5em;
+  font-weight: bold;
+  margin: 0 0 15px;
+  padding: 0;
+}
+
+h2 {
+  border-bottom: 1px solid #eee;
+  font-size: 2em;
+}
+
+h3 {
+  font-size: 1.5em;
+}
+
+h4 {
+  font-size: 1.2em;
+}
+
+p, ul {
+  margin: 15px 0;
+}
+
+ul {
+  padding-left: 30px;
+}
+
+fieldset {
+  border-radius: 8px;
+  background-color: #F3E5F5;
+}
+
+.legend {
+  font-size: 20px;
+  margin-bottom: 10px;
+}
+
+input[type='text'] {
+  width: 50px;
+  margin-left: 10px;
+}
+
+button {
+  text-align: center;
+  width: 100%;
+  margin-top: 20px;
+  border-radius: 4px;
+}
+
+.NumberPicker {
+  width: 100px;
+  padding: 0 0 0 0;
+  /*margin-bottom: 0 0 0 10px;*/
+  /*float: right;*/
+}
+
+#full {
+  width: 98%;
+  margin-left: 0px;
+}
+
+.NumberPickerDiv {
+  float: right;
+}
+
+.Text {
+  float: right;
+  height: 30px;
+}
+
+
+#fullWidthDiv {
+    width: 100%;
+    height: 100%;
+}
+#optionsDiv {
+    float: left;
+    width: 35%;
+    height: 100%;
+}
+#chartDiv {
+   margin-left: 38%;
+   margin-right:35px;
+   height: 100%;
+}
+
+#chart {
+   width: 100%;
+   height: 100%;
+   margin-bottom: 50px;
+}
+
+#chartGroup {
+   width: 100%;
+   height: 100%;
+}
+
+#title {
+  width: 100%;
+  height: 100%;
+  font-size: 30px;
+  margin-bottom: 10px;
+  text-align: center;
+}
+
+.Group {
+  margin-bottom: 20px;
+}
+
+.left {
+  float: left;
+  width: 50px;
+}
+
+.right {
+  float: left;
+  margin-left: 50px;
+}
+

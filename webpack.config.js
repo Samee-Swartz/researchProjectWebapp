@@ -2,7 +2,7 @@ module.exports = {
   // where the root is located
   entry: "./app/components/Main.js",
   output: {
-    filename: "public/bundle.js"
+    filename: "server/static/js/bundle.js"
   },
   module: {
     loaders: [
