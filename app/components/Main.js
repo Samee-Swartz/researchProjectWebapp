@@ -8,19 +8,6 @@ const {Table, Column, Cell} = FixedDataTable;
 
 numberLocalizer();
 
-// load in JSON data from file
-var data;
-
-var oReq = new XMLHttpRequest();
-oReq.onload = reqListener;
-oReq.open("get", "data/datasets.json", true);
-oReq.send();
-
-function reqListener(e) {
-    data = JSON.parse(this.responseText);
-    ReactDOM.render(<Main data={data}/>, document.getElementById('app'))
-}
-
 var Main = React.createClass({
 	getInitialState: function() {
         var emptyData = {
@@ -31,18 +18,25 @@ var Main = React.createClass({
 			}]
 		};
 
-		var d = [], ss = [];
-		var i, j;
-		for (i=0; i < this.props.data.length; i++) {
-			d.push(this.props.data[i].title);
-			var s = ["All Time Series"]
-			for (j=0; j < this.props.data[i].datasets.length; j++) {
-				s.push(this.props.data[i].datasets[j].title);
-			}
-			ss.push(s)
-		}
+		return {data: [], chartData: emptyData, tableData: [], allDatasetTitles: [], allSeriesTitles: []};
+	},
+	componentDidMount: function() {
+		var that = this;
+		$.get('/_datasets', function(dataset) {
+			var data = dataset.data;
 
-		return {chartData: emptyData, tableData: [], allDatasetTitles: d, allSeriesTitles: ss};
+			var d = [], ss = [];
+			var i, j;
+			for (i=0; i < data.length; i++) {
+				d.push(data[i].title);
+				var s = ["All Time Series"]
+				for (j=0; j < data[i].datasets.length; j++) {
+					s.push(data[i].datasets[j].title);
+				}
+				ss.push(s)
+			}
+			that.setState({data : data, allDatasetTitles: d, allSeriesTitles: ss});
+		});
 	},
 	createOneDataSeries: function(series, legend) {
 		return {
@@ -53,28 +47,28 @@ var Main = React.createClass({
 	datasetChangeUpdateChart: function(datasetIndex, seriesIndex) {
 		// All series were selected
 		if (seriesIndex == 0) {
-			var tableData = this.props.data[datasetIndex].datasets.map(function(dataset, num) {
+			var tableData = this.state.data[datasetIndex].datasets.map(function(dataset, num) {
 				return ({
 					"id" : num+1,
 					"name" : dataset.title,
 					"distance" : "--"
 				});
 			});
-			this.setState({chartData: this.props.data[datasetIndex], tableData: tableData});
+			this.setState({chartData: this.state.data[datasetIndex], tableData: tableData});
 		} else { // single series was selected
 			var tableData = [{
 					"id" : seriesIndex,
-					"name" : this.props.data[datasetIndex].datasets[seriesIndex-1].title,
+					"name" : this.state.data[datasetIndex].datasets[seriesIndex-1].title,
 					"distance" : "--"
 			}];
 
-			var one = this.createOneDataSeries(this.props.data[datasetIndex].datasets[seriesIndex-1],
-			                              		this.props.data[datasetIndex].labels);
+			var one = this.createOneDataSeries(this.state.data[datasetIndex].datasets[seriesIndex-1],
+			                              		this.state.data[datasetIndex].labels);
 
 			this.setState({chartData: one, tableData: tableData});
 		}
 
-		var seriesListForDataset = this.props.data[datasetIndex].datasets.map(function(dataset, num) {
+		var seriesListForDataset = this.state.data[datasetIndex].datasets.map(function(dataset, num) {
 				return (dataset.title);
 			});
 		this.setState({seriesList: seriesListForDataset});
@@ -229,12 +223,11 @@ var DistanceGroup = React.createClass({
 
 var QueryGroup = React.createClass({
 	getInitialState: function() {
-		var set = ['Query 1', 'Query 2', 'Query 3', 'Query 4'];
 
 		return {queryOpts: ['Similarity Query', 'Outlier Detection'],
 				showQuery: true, showLoadFromDataset: true,
 				loadFromOpts: ['Query from Dataset', 'Query from File'],
-				querySets: set, selectedFile: '', start: 0, length: 0,
+				selectedFile: '', start: 0, length: 0,
 				results: 0};
 	},
 	handleNewQueryType: function(e) {
@@ -252,23 +245,22 @@ var QueryGroup = React.createClass({
 			this.setState({showLoadFromDataset: false});
 	},
 	verifyInputNumber: function(e) {
-		// console.log(e);
-		return !isNaN(parseFloat(e)) && isFinite(e);
+		return (parseFloat(e) == e) || (e == '');
 	},
 	handleStart: function(e) {
-		console.log(e);
-		if (this.verifyInputNumber(e)) {
-			this.setState({start: e});
+		// console.log(e.target.value);
+		if (this.verifyInputNumber(e.target.value)) {
+			this.setState({start: e.target.value});
 		}
 	},
 	handleLength: function(e) {
-		if (this.verifyInputNumber(e)) {
-			this.setState({length: e});
+		if (this.verifyInputNumber(e.target.value)) {
+			this.setState({length: e.target.value});
 		}
 	},
 	handleResults: function(e) {
-		if (this.verifyInputNumber(e)) {
-			this.setState({results: e});
+		if (this.verifyInputNumber(e.target.value)) {
+			this.setState({results: e.target.value});
 		}
 	},
 	handleNewDataset: function(e) {
@@ -292,7 +284,7 @@ var QueryGroup = React.createClass({
 	  	var DropdownList = ReactWidgets.DropdownList;
 
 		return (
-			<form className="queryGroup" onSubmit={this.handleViewResults}>
+			<form className="queryGroup" onSubmit={function() {return false;}}>
 				<fieldset>
 					<div className='legend'>Query</div>
 					{/* Similarity Query vs. Outlier Detection */}
@@ -406,3 +398,8 @@ var SimilarityQuery = React.createClass({
 		);
 	}
 });
+
+ReactDOM.render(
+    <Main />,
+    document.getElementById('app')
+  );
