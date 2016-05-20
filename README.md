@@ -1,21 +1,4 @@
-The machine onex.cs.wpi.edu is setup to locally run the webapp in its current state.
-
-USING WINDOWS:
-1.	Check if Xming is installed on your machine by searching for it under in the start menu.
-	If it's not there, install it by going to www.straightrunning.com/XmingNotes/ and choosing 'Xming' under Releases > Public Domain Releases
-2.	Launch Xming (it won't appear to be running. that's ok)
-3.	Launch PuTTY.
-	Host Name: slswartz@onex.cs.wpi.edu
-	Port: 22
-	*On the left hand side: Connection > SSH > X11:
-	select Enable X11 forwarding
-	X display location: localhost:0
-
-	Password: n8H%Rbc%+4
-
-On the onex.cs.wpi.edu machine, all relevant code is in the webapp directory. Within webapp/ there are two relevant directories, researchProjectWebapp/ and ONEX/.
-webapp/researchProjectWebapp/ contains all the python server, react interface, and cpp binding code. 
-webapp/ONEX/ contains the ONEX library/utility. 
+FOR INFORMATION ABOUT INSTALLING AND RUNNING -- CONTACT RAMOZA AND/OR RODICA
 
 RELEVANT FILES:
 webapp/researchProjectWebapp/app/components/Main.js contains the react code for rendering the interface
