@@ -46,6 +46,7 @@
 
 	'use strict';
 
+	/* Main.js contains the react code to render the Graphical User Interface. */
 	var React = __webpack_require__(1);
 	var ReactDOM = __webpack_require__(158);
 	var ReactWidgets = __webpack_require__(159);
@@ -56,79 +57,182 @@
 	var Column = FixedDataTable.Column;
 	var Cell = FixedDataTable.Cell;
 
+	// This is for the ReactWidgets
 
 	numberLocalizer();
 
+	// Main displays everything in the browser window
 	var Main = React.createClass({
 		displayName: 'Main',
 
+		// This is called automatically before the first render (http://javascript.tutorialhorizon.com/2014/09/13/execution-sequence-of-a-react-components-lifecycle-methods/)
 		getInitialState: function getInitialState() {
+			// This is the base structure for the chart data
 			var emptyData = {
 				labels: [""],
 				datasets: [{
 					data: [0]
 				}]
 			};
-
-			return { data: [], chartData: emptyData, tableData: [], allDatasetTitles: [], allSeriesTitles: [] };
+			// initialize all of the datafields this class will need
+			return { rawData: [], chartData: emptyData, tableData: [], allDatasetTitles: [],
+				allSeriesTitles: [] };
 		},
+		// This is called automatically after the first render
 		componentDidMount: function componentDidMount() {
-			var that = this;
-			$.get('/_datasets', function (dataset) {
-				var data = dataset.data;
-
-				var d = [],
-				    ss = [];
-				var i, j;
-				for (i = 0; i < data.length; i++) {
-					d.push(data[i].title);
-					var s = ["All Time Series"];
-					for (j = 0; j < data[i].datasets.length; j++) {
-						s.push(data[i].datasets[j].title);
+			var that = this; // because you can't use 'this' inside the .get call
+			// this links to the routes.py functions
+			$.ajax({
+				url: '/_datasets', // calls to routes.py
+				type: 'get',
+				data: {}, // data to send
+				success: function success(dataset) {
+					var data = dataset.data;
+					var datasetTitles = [],
+					    allTimeSeries = [];
+					var i, j;
+					for (i = 0; i < data.length; i++) {
+						// run through all data
+						datasetTitles.push(data[i].title); // add the titles to d
+						var curTimeSeries = ["All Time Series"];
+						for (j = 0; j < data[i].datasets.length; j++) {
+							// run through all datasets
+							curTimeSeries.push(data[i].datasets[j].title); // add the dataset titles to curTimeSeries
+						}
+						allTimeSeries.push(curTimeSeries); // add curTimeSeries to allTimeSeries
 					}
-					ss.push(s);
+					// This mutates the given variables
+					that.setState({ rawData: data, allDatasetTitles: datasetTitles, allSeriesTitles: allTimeSeries });
+				},
+				error: function error(xhr) {
+					console.log("error in distanceChange");
 				}
-				that.setState({ data: data, allDatasetTitles: d, allSeriesTitles: ss });
 			});
 		},
+		// creates a single dataseries entry for the chart
 		createOneDataSeries: function createOneDataSeries(series, legend) {
 			return {
 				"datasets": [series],
 				"labels": legend
 			};
 		},
-		datasetChangeUpdateChart: function datasetChangeUpdateChart(datasetIndex, seriesIndex) {
+		// updates the chart based on a change in the dataset
+		datasetChangeUpdateChart: function datasetChangeUpdateChart(datasetIndex, seriesIndex, threshold) {
 			// All series were selected
 			if (seriesIndex == 0) {
-				var tableData = this.state.data[datasetIndex].datasets.map(function (dataset, num) {
+				// map the given function over all datasets. This creates the data needed for the table for all timeseries
+				var tableData = this.state.rawData[datasetIndex].datasets.map(function (dataset, num) {
 					return {
-						"id": num + 1,
-						"name": dataset.title,
-						"distance": "--"
+						"id": num + 1, // the index number
+						"name": dataset.title, // the name of the dataset
+						"distance": "--" // the distance isn't applicable yet
 					};
 				});
-				this.setState({ chartData: this.state.data[datasetIndex], tableData: tableData });
+				this.setState({ chartData: this.state.rawData[datasetIndex], tableData: tableData });
 			} else {
 				// single series was selected
 				var tableData = [{
 					"id": seriesIndex,
-					"name": this.state.data[datasetIndex].datasets[seriesIndex - 1].title,
+					"name": this.state.rawData[datasetIndex].datasets[seriesIndex - 1].title,
 					"distance": "--"
 				}];
-
-				var one = this.createOneDataSeries(this.state.data[datasetIndex].datasets[seriesIndex - 1], this.state.data[datasetIndex].labels);
+				// creates one dataseries entry for the chart
+				var one = this.createOneDataSeries(this.state.rawData[datasetIndex].datasets[seriesIndex - 1], this.state.rawData[datasetIndex].labels);
 
 				this.setState({ chartData: one, tableData: tableData });
 			}
 
-			var seriesListForDataset = this.state.data[datasetIndex].datasets.map(function (dataset, num) {
+			// creates a list of the dataset titles for the 'Query' group
+			var seriesListForDataset = this.state.rawData[datasetIndex].datasets.map(function (dataset, num) {
 				return dataset.title;
 			});
 			this.setState({ seriesList: seriesListForDataset });
+
+			$.ajax({
+				url: '/_datasetChange', // calls to routes.py
+				type: 'get',
+				data: { datasetIndex: datasetIndex, seriesIndex: seriesIndex, threshold: threshold }, // data to send
+				success: function success(response) {
+					// console.log(response);
+				},
+				error: function error(xhr) {
+					console.log("error in distanceChange");
+				}
+			});
 		},
-		datasetQueryUpdateChart: function datasetQueryUpdateChart(seriesIndex, start, length, results) {},
-		fileQueryUpdateChart: function fileQueryUpdateChart(filename, start, length, results) {},
-		outlierUpdateChart: function outlierUpdateChart(start, length, results) {},
+		// Updates the chart based on a change in the 'Query' group's 'Similarity Query' from dataset
+		datasetQueryUpdateChart: function datasetQueryUpdateChart(seriesIndex, start, length) {
+			var that = this;
+			$.ajax({
+				url: '/_datasetQueryUpdate', // calls to routes.py
+				type: 'get',
+				data: { seriesIndex: seriesIndex, start: start, length: length },
+				success: function success(response) {
+					// not enough information to compute the similarity distance
+					if (response.datasetIndex == -1) return;
+
+					// creates table data based on the result of running ONEX similarity
+					var tableData = [{
+						"id": response.seriesIndex,
+						"name": that.state.rawData[response.datasetIndex].datasets[response.seriesIndex].title,
+						"distance": response.distance
+					}];
+
+					var one = that.createOneDataSeries(that.state.rawData[response.datasetIndex].datasets[response.seriesIndex], that.state.rawData[response.datasetIndex].labels);
+
+					that.setState({ chartData: one, tableData: tableData });
+				},
+				error: function error(xhr) {
+					console.log("error in datasetQueryUpdateChart");
+				}
+			});
+		},
+		// Updates the chart based on a change in the 'Query' group's 'Similarity Query' from file
+		// TODO: actually load from file
+		fileQueryUpdateChart: function fileQueryUpdateChart(filename, start, length) {
+			$.ajax({
+				url: '/_fileQueryUpdate',
+				type: 'get',
+				data: { filename: filename, start: start, length: length },
+				success: function success(response) {
+					// console.log(response);
+				},
+				error: function error(xhr) {
+					console.log("error in fileQueryUpdateChart");
+				}
+			});
+		},
+		// Updates the chart based on a change in the 'Query' group's 'Outlier Detection'
+		// TODO: Implement this
+		outlierUpdateChart: function outlierUpdateChart(start, length) {
+			$.ajax({
+				url: '/_outlierUpdate',
+				type: 'get',
+				data: { start: start, length: length },
+				success: function success(response) {
+					// console.log(response);
+				},
+				error: function error(xhr) {
+					console.log("error in outlierUpdateChart");
+				}
+			});
+		},
+		// Updates route.py when there's a change in the 'Distance' group
+		distanceChange: function distanceChange(distance) {
+			$.ajax({
+				url: '/_distanceUpdate',
+				type: 'get',
+				data: { distance: distance },
+				success: function success(response) {
+					// console.log(response);
+				},
+				error: function error(xhr) {
+					console.log("error in distanceChange");
+				}
+			});
+		},
+
+		// renders the full GUI window. This function is called automatically.
 		render: function render() {
 			return React.createElement(
 				'div',
@@ -144,7 +248,7 @@
 					React.createElement(DatasetGroup, { seriesTitles: this.state.allSeriesTitles,
 						datasetTitles: this.state.allDatasetTitles,
 						chartChange: this.datasetChangeUpdateChart }),
-					React.createElement(DistanceGroup, null),
+					React.createElement(DistanceGroup, { distanceChange: this.distanceChange }),
 					React.createElement(QueryGroup, { seriesTitles: this.state.seriesList,
 						datasetSubmit: this.datasetQueryUpdateChart,
 						fileSubmit: this.fileQueryUpdateChart,
@@ -160,13 +264,16 @@
 		}
 	});
 
+	// The 'Display' Group.
 	var DisplayGroup = React.createClass({
 		displayName: 'DisplayGroup',
 
+		// gets data from the given row in the tableData
 		rowGetter: function rowGetter(rowIndex) {
 			return this.props.tableData[rowIndex];
 		},
 		render: function render() {
+			// sets options for the chart
 			var chartOptions = { datasetFill: false, pointDot: false, legendTemplate: "" };
 			return React.createElement(
 				'fieldset',
@@ -216,79 +323,85 @@
 		}
 	});
 
+	// The 'Dataset' group.
 	var DatasetGroup = React.createClass({
 		displayName: 'DatasetGroup',
 
 		// this is called once to get the initial state
 		getInitialState: function getInitialState() {
-			return { threshold: '', selectedDataset: 0,
-				selectedSeries: '---', series: [] };
+			return { threshold: 0, selectedDataset: 0,
+				selectedSeries: '---', series: [], selectedSeriesIndex: 0 };
 		},
+		// This handles a new chosen dataset. It sets the threshold, sets the selectedDataset state, populates the series dropdown, and updates the chart.
 		handleNewDataset: function handleNewDataset(e) {
-			this.setState({ threshold: 0.2 }); // update to new dataset's threshold
+			var initialThreshold = 0.2; // default ST
+			this.setState({ threshold: initialThreshold }); // update to new dataset's threshold
 			var i;
 			for (i = 0; i < this.props.datasetTitles.length; i++) {
 				if (this.props.datasetTitles[i] == e) {
+					// finds the index of the chosen dataset
 					// add all of the chosen dataset's series to the dropdown
 					// keep track of which dataset is selected
 					this.setState({ series: this.props.seriesTitles[i], selectedDataset: i,
 						selectedSeries: this.props.seriesTitles[i][0] });
 					// update the graph. the 0 means all series
-					this.props.chartChange(i, 0);
+					this.props.chartChange(i, 0, initialThreshold);
 				}
 			}
 		},
+		// This handles a new chosen series. It sets the selectedSeries state and updates the chart.
 		handleNewSeries: function handleNewSeries(e) {
-			this.setState({ selectedSeries: e });
 			var i;
 			for (i = 0; i < this.state.series.length; i++) {
 				if (this.state.series[i] == e) {
 					// update the graph
-					this.props.chartChange(this.state.selectedDataset, i);
+					this.props.chartChange(this.state.selectedDataset, i, this.state.threshold);
 				}
 			}
+
+			this.setState({ selectedSeries: e, selectedSeriesIndex: i });
 		},
+		// This handles a new threshold. It sets the threshold and updates the chart
 		handleThresholdChange: function handleThresholdChange(e) {
 			this.setState({ threshold: e.target.value });
+			this.props.chartChange(this.state.selectedDataset, this.state.selectedSeriesIndex, this.state.threshold);
 		},
 		render: function render() {
+			// define the dropdownList
 			var DropdownList = ReactWidgets.DropdownList;
 
 			return React.createElement(
-				'form',
-				{ className: 'Group' },
+				'fieldset',
+				null,
 				React.createElement(
-					'fieldset',
-					null,
-					React.createElement(
-						'div',
-						{ className: 'legend' },
-						'Dataset'
-					),
-					React.createElement(DropdownList, { defaultValue: 'Choose a Dataset', data: this.props.datasetTitles,
-						onChange: this.handleNewDataset }),
-					React.createElement(DropdownList, { value: this.state.selectedSeries, data: this.state.series,
-						onChange: this.handleNewSeries }),
-					'Similarity Threshold:',
-					React.createElement('input', { type: 'text', placeholder: '     ---',
-						value: this.state.threshold,
-						onChange: this.handleThresholdChange })
-				)
+					'div',
+					{ className: 'legend' },
+					'Dataset'
+				),
+				React.createElement(DropdownList, { defaultValue: 'Choose a Dataset', data: this.props.datasetTitles,
+					onChange: this.handleNewDataset }),
+				React.createElement(DropdownList, { value: this.state.selectedSeries, data: this.state.series,
+					onChange: this.handleNewSeries }),
+				'Similarity Threshold:',
+				React.createElement('input', { type: 'text', placeholder: '     ---',
+					value: this.state.threshold,
+					onChange: this.handleThresholdChange })
 			);
 		}
 	});
 
+	// The 'Distance' group
 	var DistanceGroup = React.createClass({
 		displayName: 'DistanceGroup',
 
 		getInitialState: function getInitialState() {
-			var datasets = ['Euclidean', 'Dynamic Time Warping'];
+			var datasets = ['Euclidean', 'Dynamic Time Warping']; // The available distance algorithms
 			return { sets: datasets, selected: 'Choose a Similarity Distance' };
 		},
-		handleNewDistance: function handleNewDistance(e) {
-			this.setState({ selected: e });
-			// update threshold
-			// update the graph
+		// handles a change in the selected distance. Sets the new distance and calls the callback function
+		handleNewDistance: function handleNewDistance(dist) {
+			this.setState({ selected: dist });
+			this.props.distanceChange(dist);
 		},
 		render: function render() {
 			var _this = this;
@@ -296,25 +409,22 @@
 			var DropdownList = ReactWidgets.DropdownList;
 
 			return React.createElement(
-				'form',
-				{ className: 'Group' },
+				'fieldset',
+				null,
 				React.createElement(
-					'fieldset',
-					null,
-					React.createElement(
-						'div',
-						{ className: 'legend' },
-						'Distance'
-					),
-					React.createElement(DropdownList, { defaultValue: this.state.selected, data: this.state.sets,
-						onChange: function onChange(value) {
-							return _this.handleNewDistance(value);
-						} })
-				)
+					'div',
+					{ className: 'legend' },
+					'Distance'
+				),
+				React.createElement(DropdownList, { defaultValue: this.state.selected, data: this.state.sets,
+					onChange: function onChange(value) {
+						return _this.handleNewDistance(value);
+					} })
 			);
 		}
 	});
 
+	// The 'Query' group.
 	var QueryGroup = React.createClass({
 		displayName: 'QueryGroup',
 
@@ -324,50 +434,66 @@
 				showQuery: true, showLoadFromDataset: true,
 				loadFromOpts: ['Query from Dataset', 'Query from File'],
 				selectedFile: '', start: 0, length: 0,
-				results: 0 };
+				selectedDataset: -1 };
 		},
+		// handles a change in chosen query type (similarity or outlier detection). updates what is rendered
 		handleNewQueryType: function handleNewQueryType(e) {
 			// user selected outlier detection
-			if (e == this.state.queryOpts[0]) this.setState({ showQuery: true });else this.setState({ showQuery: false });
+			if (e == this.state.queryOpts[0]) this.setState({ showQuery: true, showLoadFromDataset: true });else this.setState({ showQuery: false });
 		},
+		// handles a change in the similarity query's load from (file or dataset). updates what is rendered
 		handleNewLoadFrom: function handleNewLoadFrom(e) {
 			// user selected from file
 			if (e == this.state.loadFromOpts[0]) this.setState({ showLoadFromDataset: true });else this.setState({ showLoadFromDataset: false });
 		},
+		// verifies that the incoming is a number
 		verifyInputNumber: function verifyInputNumber(e) {
 			return parseFloat(e) == e || e == '';
 		},
+		// handles a change in the start field.
 		handleStart: function handleStart(e) {
-			// console.log(e.target.value);
+			// if it's a number, update the state
 			if (this.verifyInputNumber(e.target.value)) {
 				this.setState({ start: e.target.value });
 			}
 		},
+		// handles a change in the length field
 		handleLength: function handleLength(e) {
+			// if it's a number, update the state
 			if (this.verifyInputNumber(e.target.value)) {
 				this.setState({ length: e.target.value });
 			}
 		},
-		handleResults: function handleResults(e) {
-			if (this.verifyInputNumber(e.target.value)) {
-				this.setState({ results: e.target.value });
+		// handles a change in the chosen dataset. Updates the state with the chosen series index
+		handleNewDataset: function handleNewDataset(e) {
+			var i;
+			for (i = 0; i < this.props.seriesTitles.length; i++) {
+				if (this.props.seriesTitles[i] == e) {
+					this.setState({ selectedDataset: i });
+				}
 			}
 		},
-		handleNewDataset: function handleNewDataset(e) {
-			// this.setState({selectedDataset: e});
-		},
+		// handles choosing a query file from the computer. NOT COMPLETE
 		handleFileBrowse: function handleFileBrowse(e) {
-			// launch browse window
+			// TODO: launch browse window
 			this.setState({ selectedFile: 'testing' });
 		},
-		handleViewResults: function handleViewResults() {
+		// handles verifying data and calling the appropriate callback function
+		handleViewResults: function handleViewResults(e) {
+			e.preventDefault(); // prevents the webpage from reloading
+
 			if (this.state.showQuery && this.state.showLoadFromDataset) {
-				this.props.datasetSubmit();
+				// similarity query from dataset
+				this.props.datasetSubmit(this.state.selectedDataset, this.state.start, this.state.length);
 			} else if (this.state.showQuery && !this.state.showLoadFromDataset) {
-				this.props.fileSubmit();
+				// similarity query form file
+				this.props.fileSubmit("filename", this.state.start, this.state.length);
 			} else {
-				this.props.outlierSubmit();
+				// outlier detection
+				this.props.outlierSubmit(this.state.start, this.state.length);
 			}
+
+			return false; // prevents the webpage from reloading
 		},
 		render: function render() {
 			var _this2 = this;
@@ -377,9 +503,7 @@
 
 			return React.createElement(
 				'form',
-				{ className: 'queryGroup', onSubmit: function onSubmit() {
-						return false;
-					} },
+				{ onSubmit: this.handleViewResults },
 				React.createElement(
 					'fieldset',
 					null,
@@ -412,15 +536,11 @@
 							) : React.createElement(
 								'div',
 								null,
+								React.createElement('input', { id: 'full', type: 'text', value: this.state.selectedFile, placeholder: 'Choose Query from File' }),
 								React.createElement(
-									'form',
-									{ onSubmit: this.handleFileBrowse },
-									React.createElement('input', { id: 'full', type: 'text', value: this.state.selectedFile, placeholder: 'Choose Query from File' }),
-									React.createElement(
-										'button',
-										{ type: 'submit' },
-										'Browse'
-									)
+									'button',
+									{ type: 'submit' },
+									'Browse'
 								)
 							),
 							React.createElement(
@@ -435,10 +555,7 @@
 								React.createElement('input', { type: 'text', placeholder: '     ---', value: this.state.length,
 									onChange: this.handleLength }),
 								' ',
-								React.createElement('br', null),
-								'Number of Results:',
-								React.createElement('input', { type: 'text', placeholder: '     ---', value: this.state.results,
-									onChange: this.handleResults })
+								React.createElement('br', null)
 							)
 						) : React.createElement(
 							'div',
@@ -460,96 +577,8 @@
 		}
 	});
 
-	var SimilarityQuery = React.createClass({
-		displayName: 'SimilarityQuery',
-
-		getInitialState: function getInitialState() {
-			return { locationOpts: ['Query from Dataset', 'Query from File'],
-				sets: [], selectedDataset: 'Choose Query from Dataset',
-				selectedFile: '', showDataset: true, length: '', results: '',
-				selectedOpt: 0 };
-		},
-		componentDidMount: function componentDidMount() {
-			var querySets = ['Query 1', 'Query 2', 'Query 3', 'Query 4'];
-			this.setState({ sets: querySets });
-		},
-		handleNewOpt: function handleNewOpt(e) {
-			// user selected from file
-			if (e == this.state.locationOpts[0]) {
-				this.setState({ showDataset: true });
-				this.setState({ selectedOpt: 0 });
-			} else {
-				this.setState({ showDataset: false });
-				this.setState({ selectedOpt: 1 });
-			}
-		},
-
-		handleNewDataset: function handleNewDataset(e) {
-			this.setState({ selectedDataset: e });
-		},
-		handleFileBrowse: function handleFileBrowse(e) {
-			// if length > 0 and numResults > 0
-			// 		add the choosen dataset to the graph in red.
-			// launch browse window
-			this.setState({ selectedFile: 'testing' });
-		},
-		handleNewNumber: function handleNewNumber(e) {
-			// check for number
-		},
-		render: function render() {
-			var _this3 = this;
-
-			var DropdownList = ReactWidgets.DropdownList;
-			var RadioBtn = ReactWidgets.SelectList;
-
-			return React.createElement(
-				'div',
-				null,
-				React.createElement(
-					'div',
-					null,
-					React.createElement(RadioBtn, { value: this.state.locationOpts[this.state.selectedOpt], data: this.state.locationOpts,
-						onChange: function onChange(value) {
-							return _this3.handleNewOpt(value);
-						} }),
-					' '
-				),
-				this.state.showDataset ? React.createElement(DropdownList, { defaultValue: this.state.selectedDataset,
-					data: this.state.sets, onChange: function onChange(value) {
-						return _this3.handleNewDataset(value);
-					} }) : React.createElement(
-					'form',
-					{ onSubmit: handleFileBrowse },
-					React.createElement('input', { type: 'text', value: this.state.selectedFile, placeholder: 'Choose Query from File' }),
-					React.createElement(
-						'button',
-						null,
-						'Browse'
-					)
-				),
-				'Length:',
-				React.createElement('input', { type: 'text', placeholder: '     ---', value: this.state.length,
-					onChange: this.handleNewNumber }),
-				' ',
-				React.createElement('br', null)
-			);
-		}
-	});
-
-	// load in JSON data from file
-	// var data = [];
-
-	// var oReq = new XMLHttpRequest();
-	// oReq.onload = reqListener;
-	// oReq.open("get", "data/datasets.json", true);
-	// oReq.send();
-
-	// function reqListener(e) {
-	//     data = JSON.parse(this.responseText);
-	//     ReactDOM.render(<Main data={data}/>, document.getElementById('app'))
-	// }
-
-	ReactDOM.render(React.createElement(Main, { url: 'localhost:8080' }), document.getElementById('app'));
+	// This renders the page.
+	ReactDOM.render(React.createElement(Main, null), document.getElementById('app'));
 
 /***/ },
 /* 1 */

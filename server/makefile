@@ -1,10 +1,16 @@
-all: hello_ext.so
+onex = ../../ONEX
 
-hello_ext.so: pyBindTest.o
-	g++ -shared -std=c++11 -Wall -g -o hello_ext.so pyBindTest.o -lpython2.7 -lboost_python -lboost_system
+all: makeONEX ONEXBindings.so
 
-pyBindTest.o: serverTest.cpp
-	g++ -std=c++11 -Wall -fpic -c -g -o pyBindTest.o serverTest.cpp
+makeONEX:
+	$(MAKE) -C $(onex)
+
+ONEXBindings.so: ONEXBindings.o $(onex)/onex.so
+	g++ -shared -std=c++11 -Wall -g -o ONEXBindings.so ONEXBindings.o $(onex)/onex.so -lpython2.7 -lboost_python -lboost_system
+
+ONEXBindings.o: ONEXBindings.cpp
+	g++ -std=c++11 -Wall -fPIC -c -g -o ONEXBindings.o ONEXBindings.cpp
 
 clean:
-	rm -f pyBindTest.so pyBindTest.o
+	rm -f ONEXBindings.so ONEXBindings.o
+	cd $(onex) && make clean
